@@ -14,7 +14,7 @@
       "strength_model": 0.85,
       "strength_clip": 0.85,
       "model": [
-        "13",
+        "1",
         0
       ],
       "clip": [
@@ -25,61 +25,6 @@
     "class_type": "LoraLoader",
     "_meta": {
       "title": "Style LoRA"
-    }
-  },
-  "10": {
-    "inputs": {
-      "image": "arjun_reference_turnaround.png",
-      "upload": "image"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "Character Reference Sheet"
-    }
-  },
-  "11": {
-    "inputs": {
-      "pulid_file": "pulid_flux_v0.9.1.safetensors"
-    },
-    "class_type": "PulidFluxModelLoader",
-    "_meta": {
-      "title": "Load PuLID-Flux"
-    }
-  },
-  "12": {
-    "inputs": {
-      "provider": "CUDA"
-    },
-    "class_type": "PulidFluxInsightFaceLoader",
-    "_meta": {
-      "title": "Load InsightFace"
-    }
-  },
-  "13": {
-    "inputs": {
-      "weight": 0.82,
-      "start_at": 0.0,
-      "end_at": 1.0,
-      "model": [
-        "1",
-        0
-      ],
-      "pulid_flux": [
-        "11",
-        0
-      ],
-      "eva_clip": [
-        "12",
-        0
-      ],
-      "image": [
-        "10",
-        0
-      ]
-    },
-    "class_type": "ApplyPulidFlux",
-    "_meta": {
-      "title": "Apply PuLID Identity Lock"
     }
   },
   "20": {
@@ -224,7 +169,7 @@
     },
     "class_type": "KSampler",
     "_meta": {
-      "title": "KSampler (Set denoise=0.55 & connect node 31 for Tweak)"
+      "title": "KSampler"
     }
   },
   "8": {
