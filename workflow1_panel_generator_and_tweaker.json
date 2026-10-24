@@ -1,0 +1,259 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "flux1-dev.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint (Flux.1 Dev)"
+    }
+  },
+  "2": {
+    "inputs": {
+      "lora_name": "comic_celshaded_flux_v1.safetensors",
+      "strength_model": 0.85,
+      "strength_clip": 0.85,
+      "model": [
+        "13",
+        0
+      ],
+      "clip": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Style LoRA"
+    }
+  },
+  "10": {
+    "inputs": {
+      "image": "arjun_reference_turnaround.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Character Reference Sheet"
+    }
+  },
+  "11": {
+    "inputs": {
+      "pulid_file": "pulid_flux_v0.9.1.safetensors"
+    },
+    "class_type": "PulidFluxModelLoader",
+    "_meta": {
+      "title": "Load PuLID-Flux"
+    }
+  },
+  "12": {
+    "inputs": {
+      "provider": "CUDA"
+    },
+    "class_type": "PulidFluxInsightFaceLoader",
+    "_meta": {
+      "title": "Load InsightFace"
+    }
+  },
+  "13": {
+    "inputs": {
+      "weight": 0.82,
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "model": [
+        "1",
+        0
+      ],
+      "pulid_flux": [
+        "11",
+        0
+      ],
+      "eva_clip": [
+        "12",
+        0
+      ],
+      "image": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "ApplyPulidFlux",
+    "_meta": {
+      "title": "Apply PuLID Identity Lock"
+    }
+  },
+  "20": {
+    "inputs": {
+      "value": "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, 16:9 cinematic framing, no borders, uncropped"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "FORM: Style Prefix"
+    }
+  },
+  "21": {
+    "inputs": {
+      "value": "Arjun, 30yo male engineer, short black hair, light beard, dark olive tactical jacket"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "FORM: Character Anchor"
+    }
+  },
+  "22": {
+    "inputs": {
+      "value": "wide shot, walking down dim server corridor holding orange tablet, cyan rim light"
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "FORM: Shot Action Prompt"
+    }
+  },
+  "23": {
+    "inputs": {
+      "delimiter": ", ",
+      "clean_whitespace": "true",
+      "text_a": [
+        "20",
+        0
+      ],
+      "text_b": [
+        "21",
+        0
+      ],
+      "text_c": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "Text Concatenate",
+    "_meta": {
+      "title": "Combine Prompt Layers"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": [
+        "23",
+        0
+      ],
+      "clip": [
+        "2",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive Prompt Encode"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "speech bubble, dialogue bubble, text, watermark, typography, sound effects, split panel, multi-panel, gutter, border, 3D render, photorealistic, extra limbs",
+      "clip": [
+        "2",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative Prompt Encode"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": 1280,
+      "height": 720,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "16:9 Empty Latent"
+    }
+  },
+  "30": {
+    "inputs": {
+      "image": "shot_to_tweak.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "TWEAK MODE: Load Existing Panel"
+    }
+  },
+  "31": {
+    "inputs": {
+      "pixels": [
+        "30",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "Encode Existing Panel for Img2Img Tweak"
+    }
+  },
+  "3": {
+    "inputs": {
+      "seed": 104820,
+      "steps": 28,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "2",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler (Set denoise=0.55 & connect node 31 for Tweak)"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "episodes/ep01/panels/shot_0001",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Sequential Panel PNG"
+    }
+  }
+}
