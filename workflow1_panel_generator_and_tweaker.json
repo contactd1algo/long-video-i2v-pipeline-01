@@ -10,7 +10,7 @@
   },
   "20": {
     "inputs": {
-      "value": "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, 16:9 cinematic framing, no borders, uncropped"
+      "value": "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, bright studio lighting, well-lit scene, vivid colors, high visibility, 16:9 cinematic framing, no borders, uncropped"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -28,7 +28,7 @@
   },
   "22": {
     "inputs": {
-      "value": "wide shot, walking down dim server corridor holding orange tablet, cyan rim light"
+      "value": "wide shot, walking down clean server corridor holding glowing orange tablet, bright cyan rim light, well-lit environment"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -75,7 +75,7 @@
   },
   "7": {
     "inputs": {
-      "text": "speech bubble, dialogue bubble, text, watermark, typography, sound effects, split panel, multi-panel, gutter, border, 3D render, photorealistic, extra limbs",
+      "text": "",
       "clip": [
         "1",
         1
@@ -83,7 +83,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "Negative Prompt Encode"
+      "title": "Negative Prompt Encode (Empty for Flux CFG=1.0)"
     }
   },
   "5": {
@@ -126,8 +126,8 @@
   "3": {
     "inputs": {
       "seed": 104820,
-      "steps": 28,
-      "cfg": 3.5,
+      "steps": 25,
+      "cfg": 1.0,
       "sampler_name": "euler",
       "scheduler": "simple",
       "denoise": 1.0,
@@ -150,7 +150,7 @@
     },
     "class_type": "KSampler",
     "_meta": {
-      "title": "KSampler"
+      "title": "KSampler (CFG 1.0 for Flux)"
     }
   },
   "8": {

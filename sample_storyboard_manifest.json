@@ -2,24 +2,24 @@
   {
     "shot_index": 1,
     "shot_type": "wide establishing shot",
-    "action": "Arjun walking down a dim industrial server corridor, holding a glowing orange diagnostic tablet",
-    "lighting": "cyan rim lighting, blinking blue server rack LEDs",
-    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing softly, server lights blinking in background.",
+    "action": "Arjun walking down a clean industrial server corridor, holding a glowing orange diagnostic tablet",
+    "lighting": "bright cinematic key lighting, vibrant cyan rim light, luminous glowing blue server rack LEDs, well-lit environment, clear visible background details",
+    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing brightly, server lights blinking in background.",
     "seed": 104820
   },
   {
     "shot_index": 2,
     "shot_type": "medium close-up",
-    "action": "Arjun plugging a bypass cable into an open server rack terminal with a focused, tense expression",
-    "lighting": "amber screen reflection on his face, sharp shadows",
+    "action": "Arjun plugging a bypass cable into an open server rack terminal with a focused expression",
+    "lighting": "bright warm amber screen illumination on his face, clear studio fill light, vibrant cel-shaded colors, crisp visible details",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Subtle handheld camera drift. Arjun pushes the connector in, blinks, and looks up sharply.",
     "seed": 104821
   },
   {
     "shot_index": 3,
     "shot_type": "over-the-shoulder shot",
-    "action": "the server terminal monitor displaying a warning interface with flashing red diagnostic alerts",
-    "lighting": "harsh red emergency glow illuminating the control panel",
+    "action": "the server terminal monitor displaying a high-visibility warning interface with glowing red diagnostic alerts",
+    "lighting": "bright crimson and white screen glow illuminating the control panel and Arjun's shoulder, well-lit console, high clarity",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Camera tilts down slightly as warning lines of code rapidly scroll across the monitor screen.",
     "seed": 104822
   },
@@ -27,7 +27,7 @@
     "shot_index": 4,
     "shot_type": "close-up portrait",
     "action": "Arjun reacting to the system alert, eyes widening in realization, jaw clenched",
-    "lighting": "pulsing red alarm light casting deep shadows across his features",
+    "lighting": "bright red and cyan dual key lighting across his face, clear facial features, vibrant comic colors, balanced fill light",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Static camera with subtle breathing motion. Arjun inhales sharply, his eyes tracking across the screen data.",
     "seed": 104823
   },
@@ -35,31 +35,31 @@
     "shot_index": 5,
     "shot_type": "wide action shot",
     "action": "Arjun pulling a heavy master power switch lever down inside the server room",
-    "lighting": "dramatic high-contrast overhead lighting casting long sweeping shadows",
+    "lighting": "bright dramatic overhead fluorescent lighting, vibrant electric sparks, clear well-lit server room architecture",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Fast tracking shot as Arjun steps forward, grips the lever, and throws his full weight downward.",
     "seed": 104824
   },
   {
     "shot_index": 6,
     "shot_type": "medium shot",
-    "action": "all the server rack indicator lights abruptly shifting from active blue and green to complete blackout darkness",
-    "lighting": "sudden plunging into near-total darkness, faint emergency floor strips",
-    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Fixed camera. Rows of glowing LEDs snap off sequentially from left to right in a wave.",
+    "action": "server rack indicator lights shifting from active blue and green to glowing amber standby mode",
+    "lighting": "cool blue ambient corridor lighting, glowing emergency floor strips, clear visibility of server racks",
+    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Fixed camera. Rows of glowing LEDs shift sequentially from left to right in a wave.",
     "seed": 104825
   },
   {
     "shot_index": 7,
     "shot_type": "close-up",
-    "action": "Arjun pulling a small mechanical flashlight from his jacket pocket and clicking it on",
-    "lighting": "bright white LED beam cutting through pitch black darkness",
-    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Tight framing. Arjun's thumb clicks the tailcap, and a sharp cone of light pierces the smoke and shadow.",
+    "action": "Arjun pulling a tactical flashlight from his jacket pocket and clicking it on",
+    "lighting": "intense bright white LED beam illuminating his hands and jacket, cool blue ambient fill light, crisp cel-shaded highlights",
+    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Tight framing. Arjun's thumb clicks the tailcap, and a sharp cone of light illuminates the frame.",
     "seed": 104826
   },
   {
     "shot_index": 8,
     "shot_type": "medium tracking shot",
-    "action": "Arjun moving cautiously down a secondary maintenance hallway, sweeping his flashlight beam across rusted metal doors",
-    "lighting": "narrow beam of white light moving through heavy atmospheric dust",
+    "action": "Arjun moving cautiously down a secondary maintenance hallway, sweeping his bright flashlight beam across metal doors",
+    "lighting": "bright wide flashlight beam combined with cool overhead emergency lights, well-lit hallway walls, clear character visibility",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Smooth panning shot tracking alongside Arjun as he checks each locked door in silence.",
     "seed": 104827
   },
@@ -67,16 +67,16 @@
     "shot_index": 9,
     "shot_type": "low angle shot",
     "action": "Arjun stopping abruptly as a heavy steel security door at the end of the corridor begins to slowly creak open on its own",
-    "lighting": "eerie backlighting pouring outward from the opening doorway",
-    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Low camera angle looking up. The heavy steel door grinds open, spilling a cold white glare across the floor.",
+    "lighting": "brilliant golden-white backlighting pouring outward from the opening doorway, bright floor reflections, clear rim light on Arjun",
+    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Low camera angle looking up. The heavy steel door grinds open, spilling a bright white glare across the floor.",
     "seed": 104828
   },
   {
     "shot_index": 10,
     "shot_type": "dramatic wide closing shot",
-    "action": "Arjun standing firm in the center of the hallway, raising his diagnostic tablet like a shield as silhouetted figures emerge from the doorway",
-    "lighting": "high-contrast silhouette framing against blinding background light",
-    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow cinematic pull-back. Arjun plants his feet, staring down the corridor as shadows step forward.",
+    "action": "Arjun standing firm in the center of the hallway, raising his glowing orange diagnostic tablet as figures emerge from the bright doorway",
+    "lighting": "bright volumetric doorway lighting, warm orange glow from tablet illuminating Arjun's front, crisp high-visibility comic art",
+    "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow cinematic pull-back. Arjun plants his feet, staring down the corridor as figures step forward.",
     "seed": 104829
   }
 ]

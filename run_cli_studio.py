@@ -25,6 +25,9 @@ WF2_PATH = "workflow2_sequential_i2v_wan21.json"
 PANELS_DIR = os.path.join(COMFYUI_OUTPUT_DIR, f"episodes/{EPISODE_ID}/panels")
 VIDEOS_DIR = os.path.join(COMFYUI_OUTPUT_DIR, f"episodes/{EPISODE_ID}/videos")
 
+STYLE_PREFIX = "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, bright studio lighting, well-lit scene, vivid colors, high visibility, 16:9 cinematic framing, no borders, uncropped"
+CHAR_ANCHOR = "Arjun, 30yo male engineer, short black hair, light beard, dark olive tactical jacket over charcoal crewneck"
+
 def get_available_loras():
     lora_dir = os.path.join(COMFYUI_DIR, "models", "loras")
     if not os.path.isdir(lora_dir):
@@ -33,13 +36,11 @@ def get_available_loras():
     for f in os.listdir(lora_dir):
         if f.endswith(".safetensors"):
             full_p = os.path.join(lora_dir, f)
-            # Only treat as valid if > 1MB (ignores 0-byte or HTML error stubs)
             if os.path.getsize(full_p) > 1_000_000:
                 valid.append(f)
     return valid
 
 def sanitize_wf1_for_execution(wf1, is_img2img=False):
-    # 1. If Node 2 (LoraLoader) is present in JSON, verify the LoRA actually exists & is valid
     if "2" in wf1:
         lora_name = wf1["2"].get("inputs", {}).get("lora_name", "")
         if lora_name not in get_available_loras():
@@ -51,8 +52,10 @@ def sanitize_wf1_for_execution(wf1, is_img2img=False):
             if "7" in wf1:
                 wf1["7"]["inputs"]["clip"] = ["1", 1]
 
-    # 2. If running pure Text-to-Image (not img2img), remove unused LoadImage ("30") & VAEEncode ("31")
-    # so ComfyUI never checks for 'shot_to_tweak.png'
+    # Flux.1-dev uses distilled guidance; KSampler CFG > 1.0 causes severe over-contrast/darkening
+    if "3" in wf1 and "1" in wf1 and "flux" in wf1["1"].get("inputs", {}).get("ckpt_name", "").lower():
+        wf1["3"]["inputs"]["cfg"] = 1.0
+
     if not is_img2img:
         wf1.pop("30", None)
         wf1.pop("31", None)
@@ -90,25 +93,7 @@ def get_manifest():
         if os.path.exists(path):
             with open(path, "r") as f:
                 return json.load(f)
-    
-    return [
-        {
-            "shot_index": 1,
-            "shot_type": "wide establishing shot",
-            "action": "Arjun walking down a dim industrial server corridor holding an orange diagnostic tablet",
-            "lighting": "cyan rim lighting, blinking blue server LEDs",
-            "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing softly, blue server rack lights blinking in background.",
-            "seed": 104820
-        },
-        {
-            "shot_index": 2,
-            "shot_type": "medium close-up",
-            "action": "Arjun plugging a bypass cable into a rack terminal, focused tense expression",
-            "lighting": "amber screen reflection on his face, sharp shadows",
-            "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Subtle handheld camera drift. Arjun pushes the connector in, blinks, and looks up at the terminal monitor.",
-            "seed": 104821
-        }
-    ]
+    return []
 
 def stage1_generate_panels():
     if not os.path.exists(WF1_PATH):
@@ -116,11 +101,16 @@ def stage1_generate_panels():
         return
 
     os.makedirs(PANELS_DIR, exist_ok=True)
-    manifest = get_manifest()
-    print(f"\n🚀 Starting Stage 1: Generating {len(manifest)} clean panels...")
+    existing = glob.glob(os.path.join(PANELS_DIR, "shot_*.png"))
+    if existing:
+        ans = input(f"⚠️ Found {len(existing)} existing panel PNGs in {PANELS_DIR}. Delete them before generating new ones so Stage 2 indexes stay clean? (y/N): ").strip().lower()
+        if ans == "y":
+            for p in existing:
+                os.remove(p)
+            print("🧹 Cleared old panel PNGs.")
 
-    style_prefix = "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, 16:9 cinematic framing, no borders, uncropped"
-    char_anchor = "Arjun, 30yo male engineer, short black hair, light beard, dark olive tactical jacket over charcoal crewneck"
+    manifest = get_manifest()
+    print(f"\n🚀 Starting Stage 1: Generating {len(manifest)} well-lit clean panels...")
 
     for shot in manifest:
         with open(WF1_PATH, "r") as f:
@@ -129,9 +119,10 @@ def stage1_generate_panels():
         idx = shot.get("shot_index", 1)
         seq_name = f"shot_{idx:04d}"
 
-        wf1["20"]["inputs"]["value"] = style_prefix
-        wf1["21"]["inputs"]["value"] = char_anchor
-        wf1["22"]["inputs"]["value"] = f"{shot.get('shot_type', '')}, {shot.get('action', '')}, {shot.get('lighting', '')}".strip(", ")
+        wf1["20"]["inputs"]["value"] = STYLE_PREFIX
+        wf1["21"]["inputs"]["value"] = CHAR_ANCHOR
+        lighting_str = shot.get("lighting", "bright cinematic lighting, well-lit scene")
+        wf1["22"]["inputs"]["value"] = f"{shot.get('shot_type', '')}, {shot.get('action', '')}, {lighting_str}, bright well-lit comic art, clear visibility".strip(", ")
         
         wf1["3"]["inputs"]["latent_image"] = ["5", 0]
         wf1["3"]["inputs"]["denoise"] = 1.0
@@ -165,16 +156,16 @@ def stage1_5_tweak_panel():
         return
 
     print(f"Found latest render: {matching[-1]}")
-    new_action = input("Enter tweaked action prompt: ").strip()
+    new_action = input("Enter tweaked action/lighting prompt: ").strip()
     new_seed = int(input("Enter new seed (default 104825): ") or "104825")
     tweak_mode = input("Mode? (1 = Full Re-roll, 2 = Img2Img Refinement): ").strip()
 
     with open(WF1_PATH, "r") as f:
         wf1 = json.load(f)
 
-    wf1["20"]["inputs"]["value"] = "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, 16:9 cinematic framing, no borders, uncropped"
-    wf1["21"]["inputs"]["value"] = "Arjun, 30yo male engineer, short black hair, light beard, dark olive tactical jacket over charcoal crewneck"
-    wf1["22"]["inputs"]["value"] = new_action
+    wf1["20"]["inputs"]["value"] = STYLE_PREFIX
+    wf1["21"]["inputs"]["value"] = CHAR_ANCHOR
+    wf1["22"]["inputs"]["value"] = f"{new_action}, bright well-lit comic art, clear visibility"
     wf1["3"]["inputs"]["seed"] = new_seed
     wf1["9"]["inputs"]["filename_prefix"] = f"episodes/{EPISODE_ID}/panels/{shot_label}"
 
@@ -218,7 +209,7 @@ def stage2_generate_videos():
         wf2["10"]["inputs"]["directory"] = PANELS_DIR
         wf2["10"]["inputs"]["start_index"] = i
         wf2["10"]["inputs"]["image_load_cap"] = 1
-        wf2["10"]["inputs"]["sort_method"] = "numerical"
+        wf2["10"]["inputs"]["sort_method"] = "Numerical (ASC)"
 
         wf2["12"]["inputs"]["text"] = motion_prompt
         wf2["15"]["inputs"]["seed"] = shot.get("seed", 90000 + idx)

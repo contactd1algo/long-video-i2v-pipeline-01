@@ -97,7 +97,7 @@ with tab1:
     with col1:
         style_prefix = st.text_area(
             "Style Prefix (`style_prefix`)",
-            "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, 16:9 cinematic framing, no borders, uncropped",
+            "clean 2D graphic novel illustration, modern comic art style, crisp ink lineart, flat vibrant cel-shading, bright studio lighting, well-lit scene, vivid colors, high visibility, 16:9 cinematic framing, no borders, uncropped",
             height=90
         )
     with col2:
@@ -230,7 +230,7 @@ with tab3:
             wf2["10"]["inputs"]["directory"] = PANELS_ABS_DIR
             wf2["10"]["inputs"]["start_index"] = i
             wf2["10"]["inputs"]["image_load_cap"] = 1
-            wf2["10"]["inputs"]["sort_method"] = "numerical"
+            wf2["10"]["inputs"]["sort_method"] = "Numerical (ASC)"
 
             wf2["12"]["inputs"]["text"] = shot["motion_prompt"]
             wf2["15"]["inputs"]["seed"] = shot.get("seed", 90000 + idx)

@@ -39,11 +39,11 @@
   },
   "10": {
     "inputs": {
-      "directory": "output/episodes/ep01/panels",
+      "directory": "/workspace/runpod-slim/ComfyUI/output/episodes/ep01/panels",
       "image_load_cap": 1,
       "start_index": 0,
       "load_always": true,
-      "sort_method": "numerical"
+      "sort_method": "Numerical (ASC)"
     },
     "class_type": "LoadImagesFromDir //Inspire",
     "_meta": {
@@ -82,7 +82,7 @@
   },
   "13": {
     "inputs": {
-      "text": "3D render, photorealistic, morphing face, melting lines, speech bubbles, text, watermark, fast chaotic motion, deformed hands",
+      "text": "3D render, photorealistic, morphing face, melting lines, speech bubbles, text, watermark, fast chaotic motion, deformed hands, dark, underexposed",
       "clip": [
         "2",
         0
