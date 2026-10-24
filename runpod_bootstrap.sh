@@ -2,16 +2,16 @@
 set -e
 
 echo "=================================================================="
-echo "🚀 Starting RunPod Pre-Installed ComfyUI Studio Bootstrap (v4)..."
+echo "🚀 Starting RunPod Pre-Installed ComfyUI Studio Bootstrap (v5)..."
 echo "=================================================================="
 
 WORKSPACE="/workspace"
 STUDIO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ -d "/workspace/ComfyUI" ]; then
-    COMFY_DIR="/workspace/ComfyUI"
-elif [ -d "/workspace/runpod-slim/ComfyUI" ]; then
+if [ -d "/workspace/runpod-slim/ComfyUI" ]; then
     COMFY_DIR="/workspace/runpod-slim/ComfyUI"
+elif [ -d "/workspace/ComfyUI" ]; then
+    COMFY_DIR="/workspace/ComfyUI"
 elif [ -d "/ComfyUI" ]; then
     COMFY_DIR="/ComfyUI"
 elif [ -d "/opt/ComfyUI" ]; then
@@ -22,7 +22,12 @@ else
 fi
 echo "✅ Detected existing ComfyUI installation at: $COMFY_DIR"
 
-if [ -f "$COMFY_DIR/venv/bin/pip" ]; then
+if [ -f "/workspace/runpod-slim/.venv-cu128/bin/python" ]; then
+    PIP_CMD="/workspace/runpod-slim/.venv-cu128/bin/pip"
+    PY_CMD="/workspace/runpod-slim/.venv-cu128/bin/python"
+    HF_CLI="/workspace/runpod-slim/.venv-cu128/bin/hf"
+    STREAMLIT_CMD="/workspace/runpod-slim/.venv-cu128/bin/streamlit"
+elif [ -f "$COMFY_DIR/venv/bin/pip" ]; then
     PIP_CMD="$COMFY_DIR/venv/bin/pip"
     PY_CMD="$COMFY_DIR/venv/bin/python"
     HF_CLI="$COMFY_DIR/venv/bin/hf"
@@ -34,13 +39,13 @@ elif [ -f "/workspace/venv/bin/pip" ]; then
     STREAMLIT_CMD="/workspace/venv/bin/streamlit"
 else
     PIP_CMD="pip"
-    PY_CMD="python"
+    PY_CMD="python3"
     HF_CLI="hf"
     STREAMLIT_CMD="streamlit"
 fi
 echo "✅ Using Python executable: $PY_CMD"
 
-echo "📦 [1/4] Checking Streamlit dependencies..."
+echo "📦 [1/4] Checking Streamlit & CLI dependencies..."
 $PIP_CMD install -q "huggingface_hub[cli]" streamlit pillow
 export HF_XET_HIGH_PERFORMANCE=1
 
@@ -69,7 +74,7 @@ ensure_node "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git"
 ensure_node "https://github.com/WASasquatch/was-node-suite-comfyui.git"
 ensure_node "https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git"
 
-echo "📁 [3/4] Ensuring Directories Exist..."
+echo "📁 [3/4] Ensuring Directories & Clean Assets Exist..."
 MODELS_DIR="$COMFY_DIR/models"
 mkdir -p "$MODELS_DIR/checkpoints" \
          "$MODELS_DIR/unet" \
@@ -81,6 +86,18 @@ mkdir -p "$MODELS_DIR/checkpoints" \
          "$COMFY_DIR/output/episodes/ep01/panels" \
          "$COMFY_DIR/output/episodes/ep01/videos"
 
+# Remove any corrupted/0-byte/HTML dummy LoRA file if present
+if [ -f "$MODELS_DIR/loras/comic_celshaded_flux_v1.safetensors" ]; then
+    FILE_SIZE=$(stat -c%s "$MODELS_DIR/loras/comic_celshaded_flux_v1.safetensors" 2>/dev/null || echo 0)
+    if [ "$FILE_SIZE" -lt 1000000 ]; then
+        echo "   🧹 Removing invalid/corrupted placeholder comic_celshaded_flux_v1.safetensors ($FILE_SIZE bytes)..."
+        rm -f "$MODELS_DIR/loras/comic_celshaded_flux_v1.safetensors"
+    fi
+fi
+
+# Create valid dummy shot_to_tweak.png so LoadImage node never warns if loaded
+$PY_CMD -c "from PIL import Image; Image.new('RGB', (1280, 720), (0, 0, 0)).save('$COMFY_DIR/input/shot_to_tweak.png')"
+
 MODE=${1:-"all"}
 echo "⚡ [4/4] Verifying / Pulling Model Weights (Mode: $MODE)..."
 
@@ -89,6 +106,9 @@ if [[ "$MODE" == "all" || "$MODE" == "stage1" ]]; then
     if [ ! -f "$MODELS_DIR/checkpoints/flux1-dev.safetensors" ] && [ ! -f "$MODELS_DIR/checkpoints/flux1-dev-fp8.safetensors" ]; then
         $HF_CLI download Comfy-Org/flux1-dev flux1-dev-fp8.safetensors --local-dir "$MODELS_DIR/checkpoints"
         ln -sf "$MODELS_DIR/checkpoints/flux1-dev-fp8.safetensors" "$MODELS_DIR/checkpoints/flux1-dev.safetensors"
+    elif [ -f "$MODELS_DIR/checkpoints/flux1-dev-fp8.safetensors" ] && [ ! -f "$MODELS_DIR/checkpoints/flux1-dev.safetensors" ]; then
+        ln -sf "$MODELS_DIR/checkpoints/flux1-dev-fp8.safetensors" "$MODELS_DIR/checkpoints/flux1-dev.safetensors"
+        echo "   ✔ Linked flux1-dev-fp8.safetensors -> flux1-dev.safetensors"
     else
         echo "   ✔ Flux.1 checkpoint already present."
     fi
@@ -116,13 +136,21 @@ fi
 
 echo "🎬 Starting Services..."
 if pgrep -f "main.py" > /dev/null; then
+    echo "   🔄 Restarting ComfyUI server to refresh model/node caches..."
     pkill -f "main.py" || true
     sleep 2
 fi
 
 cd "$COMFY_DIR"
-nohup $PY_CMD main.py --listen 0.0.0.0 --port 8188 > "$WORKSPACE/comfyui.log" 2>&1 &
-echo "✅ ComfyUI listening on Port 8188"
+nohup $PY_CMD main.py --listen 0.0.0.0 --port 8188 --enable-cors-header > "$WORKSPACE/comfyui.log" 2>&1 &
+echo "⏳ Waiting for ComfyUI to listen on Port 8188..."
+for i in {1..30}; do
+    if $PY_CMD -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8188/system_stats')" >/dev/null 2>&1; then
+        echo "✅ ComfyUI is online and ready on Port 8188!"
+        break
+    fi
+    sleep 1
+done
 
 cd "$STUDIO_DIR"
 if [ -f "batch_studio_app_v2.py" ]; then
@@ -134,18 +162,6 @@ if [ -f "batch_studio_app_v2.py" ]; then
     echo "✅ Streamlit Studio listening on Port 8501"
 fi
 
-echo "--> Checking Stage 1 Style LoRA weights..."
-LORA_DIR="$MODELS_DIR/loras"
-mkdir -p "$LORA_DIR"
-
-if [ ! -f "$LORA_DIR/comic_celshaded_flux_v1.safetensors" ]; then
-    echo "   📥 Downloading comic cel-shaded LoRA..."
-    # Replace with your actual direct download URL (e.g., from Hugging Face or Civitai)
-    wget -O "$LORA_DIR/comic_celshaded_flux_v1.safetensors" "https://huggingface.co/your-username/your-repo/resolve/main/comic_celshaded_flux_v1.safetensors"
-else
-    echo "   ✔ Style LoRA already present."
-fi
-
 echo "=================================================================="
-echo "🎉 Ready! Connect via RunPod HTTP Port 8501 (Studio) & 8188 (ComfyUI)"
+echo "🎉 Ready! Run 'python run_cli_studio.py' or open Port 8501/8188"
 echo "=================================================================="

@@ -1,12 +1,22 @@
 import os
 import json
 import urllib.request
+import urllib.error
 import time
 import glob
+import shutil
 
 COMFYUI_HOST = "http://127.0.0.1:8188"
-COMFYUI_OUTPUT_DIR = "/workspace/ComfyUI/output"
-COMFYUI_INPUT_DIR = "/workspace/ComfyUI/input"
+
+def detect_comfy_dir():
+    for candidate in ["/workspace/runpod-slim/ComfyUI", "/workspace/ComfyUI", "/ComfyUI", "/opt/ComfyUI"]:
+        if os.path.isdir(candidate):
+            return candidate
+    return "/workspace/runpod-slim/ComfyUI"
+
+COMFYUI_DIR = detect_comfy_dir()
+COMFYUI_OUTPUT_DIR = os.path.join(COMFYUI_DIR, "output")
+COMFYUI_INPUT_DIR = os.path.join(COMFYUI_DIR, "input")
 EPISODE_ID = "ep01"
 
 WF1_PATH = "workflow1_panel_generator_and_tweaker.json"
@@ -15,15 +25,49 @@ WF2_PATH = "workflow2_sequential_i2v_wan21.json"
 PANELS_DIR = os.path.join(COMFYUI_OUTPUT_DIR, f"episodes/{EPISODE_ID}/panels")
 VIDEOS_DIR = os.path.join(COMFYUI_OUTPUT_DIR, f"episodes/{EPISODE_ID}/videos")
 
+def get_available_loras():
+    lora_dir = os.path.join(COMFYUI_DIR, "models", "loras")
+    if not os.path.isdir(lora_dir):
+        return []
+    valid = []
+    for f in os.listdir(lora_dir):
+        if f.endswith(".safetensors"):
+            full_p = os.path.join(lora_dir, f)
+            # Only treat as valid if > 1MB (ignores 0-byte or HTML error stubs)
+            if os.path.getsize(full_p) > 1_000_000:
+                valid.append(f)
+    return valid
+
+def sanitize_wf1_for_execution(wf1, is_img2img=False):
+    # 1. If Node 2 (LoraLoader) is present in JSON, verify the LoRA actually exists & is valid
+    if "2" in wf1:
+        lora_name = wf1["2"].get("inputs", {}).get("lora_name", "")
+        if lora_name not in get_available_loras():
+            wf1.pop("2", None)
+            if "3" in wf1:
+                wf1["3"]["inputs"]["model"] = ["1", 0]
+            if "6" in wf1:
+                wf1["6"]["inputs"]["clip"] = ["1", 1]
+            if "7" in wf1:
+                wf1["7"]["inputs"]["clip"] = ["1", 1]
+
+    # 2. If running pure Text-to-Image (not img2img), remove unused LoadImage ("30") & VAEEncode ("31")
+    # so ComfyUI never checks for 'shot_to_tweak.png'
+    if not is_img2img:
+        wf1.pop("30", None)
+        wf1.pop("31", None)
+
+    return wf1
+
 def queue_prompt(workflow_dict):
     url = f"{COMFYUI_HOST}/prompt"
     payload = json.dumps({"prompt": workflow_dict}).encode("utf-8")
     req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
+            return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8")
+        error_body = e.read().decode("utf-8", errors="replace")
         print(f"❌ ComfyUI HTTP Error {e.code}: {error_body}")
         return None
     except Exception as e:
@@ -33,6 +77,7 @@ def queue_prompt(workflow_dict):
 def print_banner():
     print("==================================================")
     print("🎬 COMIC-TO-VIDEO CLI PRODUCTION STUDIO")
+    print(f"📂 ComfyUI Root: {COMFYUI_DIR}")
     print("==================================================")
     print("1. Generate All Sequential Clean Panels (Stage 1)")
     print("2. Regenerate / Tweak a Single Panel (Stage 1.5)")
@@ -41,16 +86,11 @@ def print_banner():
     print("==================================================")
 
 def get_manifest():
-    manifest_path = "storyboard_manifest.json"
-    if os.path.exists(manifest_path):
-        with open(manifest_path, "r") as f:
-            return json.load(f)
+    for path in ["storyboard_manifest.json", "sample_storyboard_manifest.json"]:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                return json.load(f)
     
-    # Fallback sample manifest if storyboard_manifest.json doesn't exist
-    if os.path.exists("sample_storyboard_manifest.json"):
-        with open("sample_storyboard_manifest.json", "r") as f:
-            return json.load(f)
-            
     return [
         {
             "shot_index": 1,
@@ -59,6 +99,14 @@ def get_manifest():
             "lighting": "cyan rim lighting, blinking blue server LEDs",
             "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing softly, blue server rack lights blinking in background.",
             "seed": 104820
+        },
+        {
+            "shot_index": 2,
+            "shot_type": "medium close-up",
+            "action": "Arjun plugging a bypass cable into a rack terminal, focused tense expression",
+            "lighting": "amber screen reflection on his face, sharp shadows",
+            "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Subtle handheld camera drift. Arjun pushes the connector in, blinks, and looks up at the terminal monitor.",
+            "seed": 104821
         }
     ]
 
@@ -67,6 +115,7 @@ def stage1_generate_panels():
         print(f"❌ Missing workflow file: {WF1_PATH}")
         return
 
+    os.makedirs(PANELS_DIR, exist_ok=True)
     manifest = get_manifest()
     print(f"\n🚀 Starting Stage 1: Generating {len(manifest)} clean panels...")
 
@@ -88,6 +137,8 @@ def stage1_generate_panels():
         wf1["3"]["inputs"]["denoise"] = 1.0
         wf1["3"]["inputs"]["seed"] = shot.get("seed", 100000 + idx)
         wf1["9"]["inputs"]["filename_prefix"] = f"episodes/{EPISODE_ID}/panels/{seq_name}"
+
+        wf1 = sanitize_wf1_for_execution(wf1, is_img2img=False)
 
         res = queue_prompt(wf1)
         if res:
@@ -127,10 +178,10 @@ def stage1_5_tweak_panel():
     wf1["3"]["inputs"]["seed"] = new_seed
     wf1["9"]["inputs"]["filename_prefix"] = f"episodes/{EPISODE_ID}/panels/{shot_label}"
 
-    if tweak_mode == "2":
+    is_img2img = (tweak_mode == "2")
+    if is_img2img:
         os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
         temp_input = f"tweak_{shot_label}.png"
-        import shutil
         shutil.copy(matching[-1], os.path.join(COMFYUI_INPUT_DIR, temp_input))
         wf1["30"]["inputs"]["image"] = temp_input
         wf1["3"]["inputs"]["latent_image"] = ["31", 0]
@@ -141,6 +192,8 @@ def stage1_5_tweak_panel():
         wf1["3"]["inputs"]["denoise"] = 1.0
         print("🛠️ Running Full Re-roll pass...")
 
+    wf1 = sanitize_wf1_for_execution(wf1, is_img2img=is_img2img)
+
     res = queue_prompt(wf1)
     if res:
         print(f"✅ Queued tweak for [{shot_label}] -> Prompt ID: {res.get('prompt_id')}")
@@ -150,6 +203,7 @@ def stage2_generate_videos():
         print(f"❌ Missing workflow file: {WF2_PATH}")
         return
 
+    os.makedirs(VIDEOS_DIR, exist_ok=True)
     manifest = get_manifest()
     print(f"\n🎥 Starting Stage 2: Generating sequential videos for {len(manifest)} shots...")
 

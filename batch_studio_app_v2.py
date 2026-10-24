@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import urllib.request
+import urllib.error
 import urllib.parse
 import os
 import glob
@@ -10,11 +11,19 @@ from PIL import Image
 
 st.set_page_config(page_title="2-Stage Comic-to-Video Production Studio", layout="wide")
 
+def detect_comfy_dir():
+    for candidate in ["/workspace/runpod-slim/ComfyUI", "/workspace/ComfyUI", "/ComfyUI", "/opt/ComfyUI"]:
+        if os.path.isdir(candidate):
+            return candidate
+    return "/workspace/runpod-slim/ComfyUI"
+
+DEFAULT_COMFY_DIR = detect_comfy_dir()
+
 # Sidebar Configuration
 st.sidebar.header("⚙️ Studio Configuration")
 COMFYUI_HOST = st.sidebar.text_input("ComfyUI Server URL", "http://127.0.0.1:8188")
-COMFYUI_OUTPUT_DIR = st.sidebar.text_input("ComfyUI Output Directory Path", "/workspace/ComfyUI/output")
-COMFYUI_INPUT_DIR = st.sidebar.text_input("ComfyUI Input Directory Path", "/workspace/ComfyUI/input")
+COMFYUI_OUTPUT_DIR = st.sidebar.text_input("ComfyUI Output Directory Path", os.path.join(DEFAULT_COMFY_DIR, "output"))
+COMFYUI_INPUT_DIR = st.sidebar.text_input("ComfyUI Input Directory Path", os.path.join(DEFAULT_COMFY_DIR, "input"))
 EPISODE_ID = st.sidebar.text_input("Episode Folder Name", "ep01")
 
 WF1_PATH = st.sidebar.text_input("Workflow 1 JSON (T2I + Tweak)", "workflow1_panel_generator_and_tweaker.json")
@@ -25,12 +34,34 @@ VIDEOS_REL_DIR = f"episodes/{EPISODE_ID}/videos"
 PANELS_ABS_DIR = os.path.join(COMFYUI_OUTPUT_DIR, PANELS_REL_DIR)
 VIDEOS_ABS_DIR = os.path.join(COMFYUI_OUTPUT_DIR, VIDEOS_REL_DIR)
 
+def get_available_loras():
+    lora_dir = os.path.join(DEFAULT_COMFY_DIR, "models", "loras")
+    if not os.path.isdir(lora_dir):
+        return []
+    return [f for f in os.listdir(lora_dir) if f.endswith(".safetensors") and os.path.getsize(os.path.join(lora_dir, f)) > 1_000_000]
+
+def sanitize_wf1(wf1, is_img2img=False):
+    if "2" in wf1:
+        lora_name = wf1["2"].get("inputs", {}).get("lora_name", "")
+        if lora_name not in get_available_loras():
+            wf1.pop("2", None)
+            if "3" in wf1:
+                wf1["3"]["inputs"]["model"] = ["1", 0]
+            if "6" in wf1:
+                wf1["6"]["inputs"]["clip"] = ["1", 1]
+            if "7" in wf1:
+                wf1["7"]["inputs"]["clip"] = ["1", 1]
+    if not is_img2img:
+        wf1.pop("30", None)
+        wf1.pop("31", None)
+    return wf1
+
 def queue_comfy_prompt(workflow_dict):
     url = f"{COMFYUI_HOST}/prompt"
     payload = json.dumps({"prompt": workflow_dict}).encode("utf-8")
     req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read())
+        return json.loads(resp.read().decode("utf-8"))
 
 st.title("🎬 2-Stage Storyboard-to-Video Production Pipeline")
 
@@ -40,30 +71,26 @@ tab1, tab2, tab3 = st.tabs([
     "3️⃣ Stage 2: Sequential Image-to-Video (I2V)"
 ])
 
-# Default Storyboard Manifest in Session State
 if "manifest" not in st.session_state:
-    st.session_state["manifest"] = [
-        {
-            "shot_index": 1,
-            "shot_type": "wide establishing shot",
-            "action": "Arjun walking down a dim industrial server corridor holding an orange diagnostic tablet",
-            "lighting": "cyan rim lighting, blinking blue server LEDs",
-            "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing softly, blue server rack lights blinking in background.",
-            "seed": 104820
-        },
-        {
-            "shot_index": 2,
-            "shot_type": "medium close-up",
-            "action": "Arjun plugging a bypass cable into a rack terminal, focused tense expression",
-            "lighting": "amber screen reflection on his face, sharp shadows",
-            "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Subtle handheld camera drift. Arjun pushes the connector in, blinks, and looks up at the terminal monitor.",
-            "seed": 104821
-        }
-    ]
+    default_manifest = []
+    for path in ["storyboard_manifest.json", "sample_storyboard_manifest.json"]:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                default_manifest = json.load(f)
+            break
+    if not default_manifest:
+        default_manifest = [
+            {
+                "shot_index": 1,
+                "shot_type": "wide establishing shot",
+                "action": "Arjun walking down a dim industrial server corridor holding an orange diagnostic tablet",
+                "lighting": "cyan rim lighting, blinking blue server LEDs",
+                "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing softly, blue server rack lights blinking in background.",
+                "seed": 104820
+            }
+        ]
+    st.session_state["manifest"] = default_manifest
 
-# ==========================================================
-# TAB 1: STAGE 1 - LLM FORM & SEQUENTIAL PANEL GENERATION
-# ==========================================================
 with tab1:
     st.subheader("📌 Global Identity & Style Locks")
     col1, col2 = st.columns(2)
@@ -98,38 +125,31 @@ with tab1:
         if not os.path.exists(WF1_PATH):
             st.error(f"Missing {WF1_PATH}")
         else:
-            with open(WF1_PATH, "r") as f:
-                wf1 = json.load(f)
-
             prog = st.progress(0)
             shots = st.session_state["manifest"]
             for i, shot in enumerate(shots):
+                with open(WF1_PATH, "r") as f:
+                    wf1 = json.load(f)
                 idx = shot.get("shot_index", i + 1)
                 seq_name = f"shot_{idx:04d}"
                 
-                # Update Form Nodes in Workflow 1
                 wf1["20"]["inputs"]["value"] = style_prefix
                 wf1["21"]["inputs"]["value"] = char_anchor
                 wf1["22"]["inputs"]["value"] = f"{shot.get('shot_type', '')}, {shot.get('action', '')}, {shot.get('lighting', '')}".strip(", ")
                 
-                # Ensure Pure Text-to-Image mode (Node 5 EmptyLatent -> KSampler Node 3, denoise 1.0)
                 wf1["3"]["inputs"]["latent_image"] = ["5", 0]
                 wf1["3"]["inputs"]["denoise"] = 1.0
                 wf1["3"]["inputs"]["seed"] = shot.get("seed", 100000 + idx)
                 wf1["9"]["inputs"]["filename_prefix"] = f"{PANELS_REL_DIR}/{seq_name}"
 
+                wf1 = sanitize_wf1(wf1, is_img2img=False)
                 res = queue_comfy_prompt(wf1)
                 st.write(f"✅ Queued `{seq_name}` (Prompt ID: `{res['prompt_id']}`)")
                 prog.progress((i + 1) / len(shots))
                 time.sleep(0.2)
 
-# ==========================================================
-# TAB 2: STAGE 1.5 - REVIEW & TWEAK SPECIFIC PANELS
-# ==========================================================
 with tab2:
     st.subheader("🔍 Inspect & Tweak Specific Panels")
-    st.caption("Select any shot that didn't turn out as expected. You can either Re-Roll with a new prompt/seed, or run an Img2Img Tweak (preserving composition while fixing details) and overwrite the sequential file.")
-
     shots = st.session_state["manifest"]
     shot_options = [f"shot_{s.get('shot_index', i+1):04d}" for i, s in enumerate(shots)]
     selected_shot_label = st.selectbox("Select Sequential Shot to Inspect / Tweak:", shot_options)
@@ -137,8 +157,6 @@ with tab2:
     current_shot = shots[selected_idx]
 
     col_img, col_tweak = st.columns([1, 1])
-
-    # Find latest generated file matching shot_XXXX*.png
     matching_files = sorted(glob.glob(os.path.join(PANELS_ABS_DIR, f"{selected_shot_label}*.png")))
     
     with col_img:
@@ -161,7 +179,6 @@ with tab2:
         denoise_val = st.slider("Denoise Strength (For Img2Img Mode: 0.40 = subtle fix, 0.70 = major change)", 0.20, 1.00, 0.55, 0.05)
 
         if st.button(f"🛠️ Regenerate `{selected_shot_label}` Only", type="primary"):
-            # Update session state
             st.session_state["manifest"][selected_idx]["action"] = new_action
             st.session_state["manifest"][selected_idx]["lighting"] = new_lighting
             st.session_state["manifest"][selected_idx]["seed"] = new_seed
@@ -175,27 +192,24 @@ with tab2:
             wf1["3"]["inputs"]["seed"] = new_seed
             wf1["9"]["inputs"]["filename_prefix"] = f"{PANELS_REL_DIR}/{selected_shot_label}"
 
-            if tweak_mode.startswith("2.") and matching_files:
-                # Copy existing panel to ComfyUI input dir for VAEEncode Img2Img
+            is_img2img = tweak_mode.startswith("2.") and bool(matching_files)
+            if is_img2img:
+                os.makedirs(COMFYUI_INPUT_DIR, exist_ok=True)
                 temp_input_name = f"tweak_{selected_shot_label}.png"
                 shutil.copy(matching_files[-1], os.path.join(COMFYUI_INPUT_DIR, temp_input_name))
                 wf1["30"]["inputs"]["image"] = temp_input_name
-                wf1["3"]["inputs"]["latent_image"] = ["31", 0] # Connect VAEEncode Node 31
+                wf1["3"]["inputs"]["latent_image"] = ["31", 0]
                 wf1["3"]["inputs"]["denoise"] = denoise_val
             else:
-                wf1["3"]["inputs"]["latent_image"] = ["5", 0] # EmptyLatent Node 5
+                wf1["3"]["inputs"]["latent_image"] = ["5", 0]
                 wf1["3"]["inputs"]["denoise"] = 1.0
 
+            wf1 = sanitize_wf1(wf1, is_img2img=is_img2img)
             res = queue_comfy_prompt(wf1)
             st.success(f"Queued tweaked `{selected_shot_label}`! (Prompt ID: `{res['prompt_id']}`)")
 
-# ==========================================================
-# TAB 3: STAGE 2 - SEQUENTIAL IMAGE-TO-VIDEO WORKFLOW
-# ==========================================================
 with tab3:
     st.subheader("🎥 Stage 2: Sequential Image-to-Video Runner (Workflow 2)")
-    st.caption("Iterates through your approved sequential panel PNGs in numerical order and pairs each start frame with its corresponding user/LLM motion prompt.")
-
     shots = st.session_state["manifest"]
     for i, s in enumerate(shots):
         idx = s.get("shot_index", i + 1)
@@ -205,29 +219,24 @@ with tab3:
             key=f"mp_{idx}"
         )
 
-    col_run_all, col_run_one = st.columns(2)
-    with col_run_all:
-        if st.button("🎬 Trigger Sequential Video Generation for All Panels", type="primary"):
+    if st.button("🎬 Trigger Sequential Video Generation for All Panels", type="primary"):
+        prog_v = st.progress(0)
+        for i, shot in enumerate(shots):
             with open(WF2_PATH, "r") as f:
                 wf2 = json.load(f)
+            idx = shot.get("shot_index", i + 1)
+            seq_clip_name = f"clip_{idx:04d}"
 
-            prog_v = st.progress(0)
-            for i, shot in enumerate(shots):
-                idx = shot.get("shot_index", i + 1)
-                seq_clip_name = f"clip_{idx:04d}"
+            wf2["10"]["inputs"]["directory"] = PANELS_ABS_DIR
+            wf2["10"]["inputs"]["start_index"] = i
+            wf2["10"]["inputs"]["image_load_cap"] = 1
+            wf2["10"]["inputs"]["sort_method"] = "numerical"
 
-                # Point Inspire Directory Loader to Panels Folder and pick index i sequentially
-                wf2["10"]["inputs"]["directory"] = PANELS_ABS_DIR
-                wf2["10"]["inputs"]["start_index"] = i
-                wf2["10"]["inputs"]["image_load_cap"] = 1
-                wf2["10"]["inputs"]["sort_method"] = "numerical"
+            wf2["12"]["inputs"]["text"] = shot["motion_prompt"]
+            wf2["15"]["inputs"]["seed"] = shot.get("seed", 90000 + idx)
+            wf2["17"]["inputs"]["filename_prefix"] = f"{VIDEOS_REL_DIR}/{seq_clip_name}"
 
-                # Inject shot-specific motion prompt
-                wf2["12"]["inputs"]["text"] = shot["motion_prompt"]
-                wf2["15"]["inputs"]["seed"] = shot.get("seed", 90000 + idx)
-                wf2["17"]["inputs"]["filename_prefix"] = f"{VIDEOS_REL_DIR}/{seq_clip_name}"
-
-                res = queue_comfy_prompt(wf2)
-                st.write(f"🎞️ Queued Video `{seq_clip_name}.mp4` from `start_index={i}` (Prompt ID: `{res['prompt_id']}`)")
-                prog_v.progress((i + 1) / len(shots))
-                time.sleep(0.3)
+            res = queue_comfy_prompt(wf2)
+            st.write(f"🎞️ Queued Video `{seq_clip_name}.mp4` from `start_index={i}` (Prompt ID: `{res['prompt_id']}`)")
+            prog_v.progress((i + 1) / len(shots))
+            time.sleep(0.3)
