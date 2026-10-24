@@ -22,6 +22,10 @@ def queue_prompt(workflow_dict):
     try:
         with urllib.request.urlopen(req) as resp:
             return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        print(f"❌ ComfyUI HTTP Error {e.code}: {error_body}")
+        return None
     except Exception as e:
         print(f"❌ Connection error to ComfyUI at {COMFYUI_HOST}: {e}")
         return None
@@ -31,19 +35,22 @@ def print_banner():
     print("🎬 COMIC-TO-VIDEO CLI PRODUCTION STUDIO")
     print("==================================================")
     print("1. Generate All Sequential Clean Panels (Stage 1)")
-    print("2. Regenerate / Tweak a Single Panel")
+    print("2. Regenerate / Tweak a Single Panel (Stage 1.5)")
     print("3. Generate Sequential Videos from Panels (Stage 2)")
     print("4. Exit")
     print("==================================================")
 
 def get_manifest():
-    # Default manifest or load from a JSON file if present
     manifest_path = "storyboard_manifest.json"
     if os.path.exists(manifest_path):
         with open(manifest_path, "r") as f:
             return json.load(f)
     
-    # Default sample manifest
+    # Fallback sample manifest if storyboard_manifest.json doesn't exist
+    if os.path.exists("sample_storyboard_manifest.json"):
+        with open("sample_storyboard_manifest.json", "r") as f:
+            return json.load(f)
+            
     return [
         {
             "shot_index": 1,
@@ -52,14 +59,6 @@ def get_manifest():
             "lighting": "cyan rim lighting, blinking blue server LEDs",
             "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing softly, blue server rack lights blinking in background.",
             "seed": 104820
-        },
-        {
-            "shot_index": 2,
-            "shot_type": "medium close-up",
-            "action": "Arjun plugging a bypass cable into a rack terminal, focused tense expression",
-            "lighting": "amber screen reflection on his face, sharp shadows",
-            "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Subtle handheld camera drift. Arjun pushes the connector in, blinks, and looks up at the terminal monitor.",
-            "seed": 104821
         }
     ]
 
@@ -68,9 +67,6 @@ def stage1_generate_panels():
         print(f"❌ Missing workflow file: {WF1_PATH}")
         return
 
-    with open(WF1_PATH, "r") as f:
-        wf1 = json.load(f)
-
     manifest = get_manifest()
     print(f"\n🚀 Starting Stage 1: Generating {len(manifest)} clean panels...")
 
@@ -78,6 +74,9 @@ def stage1_generate_panels():
     char_anchor = "Arjun, 30yo male engineer, short black hair, light beard, dark olive tactical jacket over charcoal crewneck"
 
     for shot in manifest:
+        with open(WF1_PATH, "r") as f:
+            wf1 = json.load(f)
+
         idx = shot.get("shot_index", 1)
         seq_name = f"shot_{idx:04d}"
 
@@ -151,13 +150,13 @@ def stage2_generate_videos():
         print(f"❌ Missing workflow file: {WF2_PATH}")
         return
 
-    with open(WF2_PATH, "r") as f:
-        wf2 = json.load(f)
-
     manifest = get_manifest()
     print(f"\n🎥 Starting Stage 2: Generating sequential videos for {len(manifest)} shots...")
 
     for i, shot in enumerate(manifest):
+        with open(WF2_PATH, "r") as f:
+            wf2 = json.load(f)
+
         idx = shot.get("shot_index", i + 1)
         seq_clip_name = f"clip_{idx:04d}"
         motion_prompt = shot.get("motion_prompt", "Maintain 2D comic style. Subtle motion.")
