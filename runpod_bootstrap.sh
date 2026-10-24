@@ -134,6 +134,18 @@ if [ -f "batch_studio_app_v2.py" ]; then
     echo "✅ Streamlit Studio listening on Port 8501"
 fi
 
+echo "--> Checking Stage 1 Style LoRA weights..."
+LORA_DIR="$MODELS_DIR/loras"
+mkdir -p "$LORA_DIR"
+
+if [ ! -f "$LORA_DIR/comic_celshaded_flux_v1.safetensors" ]; then
+    echo "   📥 Downloading comic cel-shaded LoRA..."
+    # Replace with your actual direct download URL (e.g., from Hugging Face or Civitai)
+    wget -O "$LORA_DIR/comic_celshaded_flux_v1.safetensors" "https://huggingface.co/your-username/your-repo/resolve/main/comic_celshaded_flux_v1.safetensors"
+else
+    echo "   ✔ Style LoRA already present."
+fi
+
 echo "=================================================================="
 echo "🎉 Ready! Connect via RunPod HTTP Port 8501 (Studio) & 8188 (ComfyUI)"
 echo "=================================================================="
