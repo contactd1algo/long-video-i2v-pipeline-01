@@ -103,6 +103,7 @@ class StudioContext:
         self.char_anchor = DEFAULT_CHAR_ANCHOR
         self.bibles = {}
         self.wan_steps = 15
+        self.lora_steps = int(os.environ.get("WAN_LORA_STEPS", "6"))   # steps when the speed LoRA is active (4 is the LoRA's native value)
         self.wan_resolution = "720p"
         self.use_speed_lora = True
         self.chain_within_run = False
@@ -873,7 +874,7 @@ def build_fast_wf2(ctx, start_image_filename, motion_prompt, seed, output_prefix
         wf2["99"] = {"inputs": {"lora_name": speed_lora, "strength_model": 1.0, "model": ["1", 0]},
                      "class_type": "LoraLoaderModelOnly", "_meta": {"title": "Wan 2.1 4-Step Speed LoRA"}}
         wf2["15"]["inputs"]["model"] = ["99", 0]
-        wf2["15"]["inputs"]["steps"] = 6
+        wf2["15"]["inputs"]["steps"] = ctx.lora_steps
         wf2["15"]["inputs"]["cfg"] = 1.0
     else:
         wf2["15"]["inputs"]["steps"] = ctx.wan_steps
@@ -890,7 +891,7 @@ def stage2_generate_videos(ctx, wait_for_completion=True):
     os.makedirs(ctx.chain_dir, exist_ok=True)
     loras = get_available_loras()
     using_lora = ctx.use_speed_lora and ("wan2.1_i2v_720p_lightx2v_4step_lora.safetensors" in loras)
-    eff_steps = 6 if using_lora else ctx.wan_steps
+    eff_steps = ctx.lora_steps if using_lora else ctx.wan_steps
     print(f"\n🎥 [STAGE 2] {len(manifest)} shots | Res: {ctx.wan_resolution} | Steps: {eff_steps} (Speed LoRA: {using_lora})")
     fresh = starts_fresh(manifest)
     prev_run_frame = None if fresh else ctx.get_previous_run_last_frame()
@@ -1193,6 +1194,7 @@ def cli_main(args):
         ctx = StudioContext(args.project, r)
         ctx.force = args.force
         if args.shots: ctx.only_shots = set(parse_ranges(args.shots))
+        if getattr(args, "steps", None): ctx.lora_steps = args.steps
         if args.res: ctx.wan_resolution = "480p" if args.res == 480 else "720p"
         if args.chain: ctx.chain_within_run = True
         run_stage(ctx, args.stage)
@@ -1253,6 +1255,7 @@ def interactive_menu():
             for r in sorted(r for v in emap.values() for r in v["runs"]):
                 c = StudioContext(ctx.project_name, r)
                 c.wan_resolution, c.wan_steps, c.use_speed_lora = ctx.wan_resolution, ctx.wan_steps, ctx.use_speed_lora
+                c.lora_steps = ctx.lora_steps
                 c.chain_within_run, c.force = ctx.chain_within_run, ctx.force
                 run_stage(c, "all")
             build_episode_videos(ctx)
@@ -1269,6 +1272,7 @@ def main():
     ap.add_argument("--force", action="store_true", help="re-render even if output exists")
     ap.add_argument("--dry-run", action="store_true", help="queue nothing; print what would be queued")
     ap.add_argument("--res", type=int, choices=[480, 720])
+    ap.add_argument("--steps", type=int, choices=range(3, 13), metavar="3-12", help="Wan sampler steps with the speed LoRA (default 6; 4 is faster)")
     ap.add_argument("--chain", action="store_true", help="chain last frame inside the same scene")
     args = ap.parse_args()
     if args.stage:
