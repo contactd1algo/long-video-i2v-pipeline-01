@@ -3,32 +3,44 @@
     "shot_index": 1,
     "shot_type": "wide establishing shot",
     "action": "Arjun walking down a clean industrial server corridor, holding a glowing orange diagnostic tablet",
-    "lighting": "bright cinematic key lighting, vibrant cyan rim light, luminous glowing blue server rack LEDs, well-lit environment, clear visible background details",
+    "lighting": "bright cinematic key lighting, vibrant cyan rim light, luminous glowing blue server rack LEDs, well-lit environment",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow camera push-in. Arjun walks forward steadily, tablet screen glowing brightly, server lights blinking in background.",
+    "dialogue": "Sector four telemetry is spiking. If the cooling bus fails, the entire cluster goes down.",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "server_hum",
     "seed": 104820
   },
   {
     "shot_index": 2,
     "shot_type": "medium close-up",
     "action": "Arjun plugging a bypass cable into an open server rack terminal with a focused expression",
-    "lighting": "bright warm amber screen illumination on his face, clear studio fill light, vibrant cel-shaded colors, crisp visible details",
+    "lighting": "bright warm amber screen illumination on his face, clear studio fill light, vibrant cel-shaded colors",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Subtle handheld camera drift. Arjun pushes the connector in, blinks, and looks up sharply.",
+    "dialogue": "Come on... accept the manual handshake.",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "beeps",
     "seed": 104821
   },
   {
     "shot_index": 3,
     "shot_type": "over-the-shoulder shot",
     "action": "the server terminal monitor displaying a high-visibility warning interface with glowing red diagnostic alerts",
-    "lighting": "bright crimson and white screen glow illuminating the control panel and Arjun's shoulder, well-lit console, high clarity",
+    "lighting": "bright crimson and white screen glow illuminating the control panel and Arjun's shoulder, well-lit console",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Camera tilts down slightly as warning lines of code rapidly scroll across the monitor screen.",
+    "dialogue": "Warning. Unauthorized kernel override detected in rack seven.",
+    "voice": "en-US-AriaNeural",
+    "sfx_type": "alarm",
     "seed": 104822
   },
   {
     "shot_index": 4,
     "shot_type": "close-up portrait",
     "action": "Arjun reacting to the system alert, eyes widening in realization, jaw clenched",
-    "lighting": "bright red and cyan dual key lighting across his face, clear facial features, vibrant comic colors, balanced fill light",
+    "lighting": "bright red and cyan dual key lighting across his face, clear facial features, vibrant comic colors",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Static camera with subtle breathing motion. Arjun inhales sharply, his eyes tracking across the screen data.",
+    "dialogue": "That's not a thermal fault. Someone is inside the root network.",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "alarm",
     "seed": 104823
   },
   {
@@ -37,6 +49,9 @@
     "action": "Arjun pulling a heavy master power switch lever down inside the server room",
     "lighting": "bright dramatic overhead fluorescent lighting, vibrant electric sparks, clear well-lit server room architecture",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Fast tracking shot as Arjun steps forward, grips the lever, and throws his full weight downward.",
+    "dialogue": "Isolating the main bus now!",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "power_down",
     "seed": 104824
   },
   {
@@ -45,30 +60,42 @@
     "action": "server rack indicator lights shifting from active blue and green to glowing amber standby mode",
     "lighting": "cool blue ambient corridor lighting, glowing emergency floor strips, clear visibility of server racks",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Fixed camera. Rows of glowing LEDs shift sequentially from left to right in a wave.",
+    "dialogue": "Backup batteries online. External uplinks severed.",
+    "voice": "en-US-AriaNeural",
+    "sfx_type": "power_down",
     "seed": 104825
   },
   {
     "shot_index": 7,
     "shot_type": "close-up",
     "action": "Arjun pulling a tactical flashlight from his jacket pocket and clicking it on",
-    "lighting": "intense bright white LED beam illuminating his hands and jacket, cool blue ambient fill light, crisp cel-shaded highlights",
+    "lighting": "intense bright white LED beam illuminating his hands and jacket, cool blue ambient fill light",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Tight framing. Arjun's thumb clicks the tailcap, and a sharp cone of light illuminates the frame.",
+    "dialogue": "If they bypassed the hardware firewall, they did it physically from the vault.",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "server_hum",
     "seed": 104826
   },
   {
     "shot_index": 8,
     "shot_type": "medium tracking shot",
     "action": "Arjun moving cautiously down a secondary maintenance hallway, sweeping his bright flashlight beam across metal doors",
-    "lighting": "bright wide flashlight beam combined with cool overhead emergency lights, well-lit hallway walls, clear character visibility",
+    "lighting": "bright wide flashlight beam combined with cool overhead emergency lights, well-lit hallway walls",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Smooth panning shot tracking alongside Arjun as he checks each locked door in silence.",
+    "dialogue": "Sub-level corridor clear. Moving toward the cold storage airlock.",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "server_hum",
     "seed": 104827
   },
   {
     "shot_index": 9,
     "shot_type": "low angle shot",
     "action": "Arjun stopping abruptly as a heavy steel security door at the end of the corridor begins to slowly creak open on its own",
-    "lighting": "brilliant golden-white backlighting pouring outward from the opening doorway, bright floor reflections, clear rim light on Arjun",
+    "lighting": "brilliant golden-white backlighting pouring outward from the opening doorway, bright floor reflections",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Low camera angle looking up. The heavy steel door grinds open, spilling a bright white glare across the floor.",
+    "dialogue": "Wait... the airlock seal is already open.",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "door_creak",
     "seed": 104828
   },
   {
@@ -77,6 +104,9 @@
     "action": "Arjun standing firm in the center of the hallway, raising his glowing orange diagnostic tablet as figures emerge from the bright doorway",
     "lighting": "bright volumetric doorway lighting, warm orange glow from tablet illuminating Arjun's front, crisp high-visibility comic art",
     "motion_prompt": "Maintain 2D cel-shaded graphic novel style. Slow cinematic pull-back. Arjun plants his feet, staring down the corridor as figures step forward.",
+    "dialogue": "End of the line. Step into the light!",
+    "voice": "en-US-ChristopherNeural",
+    "sfx_type": "alarm",
     "seed": 104829
   }
 ]
