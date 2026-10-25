@@ -103,6 +103,7 @@ class StudioContext:
         self.char_anchor = DEFAULT_CHAR_ANCHOR
         self.bibles = {}
         self.wan_steps = 15
+        self.seed_offset = 0          # --reseed N: added to every Flux/Wan seed so a re-roll gives a different image
         self.lora_steps = int(os.environ.get("WAN_LORA_STEPS", "6"))   # steps when the speed LoRA is active (4 is the LoRA's native value)
         self.wan_resolution = "720p"
         self.use_speed_lora = True
@@ -806,7 +807,7 @@ def build_wf1(ctx, shot, idx):
     wf1["22"]["inputs"]["value"] = scene
     wf1["3"]["inputs"]["latent_image"] = ["5", 0]
     wf1["3"]["inputs"]["denoise"] = 1.0
-    wf1["3"]["inputs"]["seed"] = shot.get("seed", 100000 + idx)
+    wf1["3"]["inputs"]["seed"] = shot.get("seed", 100000 + idx) + ctx.seed_offset
     wf1["9"]["inputs"]["filename_prefix"] = f"projects/{ctx.project_name}/{ctx.run_name}/panels/{tag}"
     return sanitize_wf1(wf1, is_img2img=False)
 
@@ -930,7 +931,7 @@ def stage2_generate_videos(ctx, wait_for_completion=True):
         if not DRY_RUN:
             shutil.copy(start_png, os.path.join(COMFYUI_INPUT_DIR, input_filename))
         output_prefix = f"projects/{ctx.project_name}/{ctx.run_name}/videos/{tag}"
-        wf2 = build_fast_wf2(ctx, input_filename, compose_wan_prompt(ctx, shot), shot.get("seed", 90000 + idx), output_prefix)
+        wf2 = build_fast_wf2(ctx, input_filename, compose_wan_prompt(ctx, shot), shot.get("seed", 90000 + idx) + ctx.seed_offset, output_prefix)
         res = queue_prompt(wf2)
         if res:
             print(f"🎞️ Queued Video [{tag}.mp4] -> Prompt ID: {res.get('prompt_id')}")
@@ -1195,6 +1196,7 @@ def cli_main(args):
         ctx.force = args.force
         if args.shots: ctx.only_shots = set(parse_ranges(args.shots))
         if getattr(args, "steps", None): ctx.lora_steps = args.steps
+        ctx.seed_offset = getattr(args, "reseed", 0) or 0
         if args.res: ctx.wan_resolution = "480p" if args.res == 480 else "720p"
         if args.chain: ctx.chain_within_run = True
         run_stage(ctx, args.stage)
@@ -1272,6 +1274,7 @@ def main():
     ap.add_argument("--force", action="store_true", help="re-render even if output exists")
     ap.add_argument("--dry-run", action="store_true", help="queue nothing; print what would be queued")
     ap.add_argument("--res", type=int, choices=[480, 720])
+    ap.add_argument("--reseed", type=int, default=0, help="add N to every seed (use with --force --shots to re-roll a bad panel/clip)")
     ap.add_argument("--steps", type=int, choices=range(3, 13), metavar="3-12", help="Wan sampler steps with the speed LoRA (default 6; 4 is faster)")
     ap.add_argument("--chain", action="store_true", help="chain last frame inside the same scene")
     args = ap.parse_args()
