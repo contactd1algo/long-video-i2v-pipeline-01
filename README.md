@@ -46,11 +46,14 @@ python run_cli_studio.py
 ```
 
 ### 3. CLI Menu Options
-* **Option 1:** Run Full Automated Pipeline (Stage 1 Panels $ightarrow$ Stage 2 Videos $ightarrow$ Stage 3 Audio & Master Stitch).
+* **Option 1:** Run Full Automated Pipeline (Stage 1 Panels $
+ightarrow$ Stage 2 Videos $
+ightarrow$ Stage 3 Audio & Master Stitch).
 * **Option 2:** Stage 1 Only (Generate Clean Comic Panels).
 * **Option 3:** Stage 2 Only (Generate Sequential I2V Videos using Wan 2.1 + 4-Step Speed LoRA).
 * **Option 4:** Stage 3 Only (Generate Voiceover/SFX, Mix BGM, and Stitch Master Video).
-* **Option 5:** Switch Project Name or Advance to Next Run (`run1` $ightarrow$ `run2`).
+* **Option 5:** Switch Project Name or Advance to Next Run (`run1` $
+ightarrow$ `run2`).
 * **Option 6:** Speed & Continuity Settings (Toggle 720p/480p, Sampling Steps, Shot Chaining).
 * **Option 7:** Exit.
 
@@ -70,3 +73,9 @@ To add background music throughout your episode:
   1. Focus manifest actions on **medium close-ups, over-the-shoulder angles, upper-body interactions, and subtle camera push-ins/pans** rather than wide-shot walking.
   2. In your `motion_prompt`, use phrases like `"subtle camera push-in, micro-expressions, character shifting weight, blinking eyes"` rather than `"running across the corridor"`.
   3. Use **Img2Img Refinement (Stage 1.5)** or **Intra-run Chaining** to lock anatomical proportions between cuts.
+
+  ```
+  nohup python run_cli_studio.py --project LanternSister --runs 1 --stage all --steps 4 > film.log 2>&1 &
+
+python run_cli_studio.py --project LanternSister --runs 1 --stage panels --shots 65 --force --reseed 3
+```
